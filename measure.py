@@ -15,6 +15,7 @@ dbconfig = {
     'raise_on_warnings': True,
 }
 
+measurement_count = 0
 verbose = True
 interval = 10  # Seconds
 try:
@@ -37,20 +38,30 @@ sh = sense_hat.SenseHat()
 
 
 def countdown(t):
-    print("Restarting the program after %s seconds" % t)
+    if verbose:
+        print("Restarting the program after %s seconds" % t)
 
     while t:
         mins, secs = divmod(t, 60)
         timeformat = '{:02d}:{:02d}'.format(mins, secs)
-        print(timeformat, end='\r')
+
+        if verbose:
+            print(timeformat, end='\r')
+
         time.sleep(1)
         t -= 1
-    print('Restarting the program...\n\n\n\n\n')
+
+    if verbose:
+        print('Restarting the program...\n\n\n\n\n')
 
 
 # Create an infinite loop for getting the temperature every 10 seconds.
 try:
     while True:
+        measurment_count += 1
+        if verbose:
+            print("Measurment: %s" % measurment_count)
+
         try:
             database_connection = mariadb.connect(**dbconfig)
             if verbose:
