@@ -1,0 +1,216 @@
+<html>
+<head>
+<script src="/lib/moment.js"></script>
+<script src="/lib/Chart.js"></script>
+</head>
+<body>
+<button id="refreshTemperatureData">Refresh</button>
+<div style="width:75%">
+<canvas id="tempChart"></canvas>
+</div>
+<br/>
+<br/>
+<button id="refreshHumidityData">Refresh</button>
+<div style="width:75%">
+<canvas id="humidityChart"></canvas>
+</div>
+<br/>
+<br/>
+<button id="refreshPressureData">Refresh</button>
+<div style="width:75%">
+<canvas id="pressureChart"></canvas>
+</div>
+<br/>
+<br/>
+<script>
+
+// refresh data
+document.getElementById('refreshTemperatureData').addEventListener('click', function() {
+    fetchTemperatureData();
+    fetchAirHumidityData();
+    fetchAirPressureData();
+});
+
+document.getElementById('refreshHumidityData').addEventListener('click', function() {
+    fetchTemperatureData();
+    fetchAirHumidityData();
+    fetchAirPressureData();
+});
+document.getElementById('refreshPressureData').addEventListener('click', function() {
+    fetchTemperatureData();
+    fetchAirHumidityData();
+    fetchAirPressureData();
+});
+</script>
+
+<script>
+// global
+var points = [];
+
+function fetchTemperatureData() {
+    // fetchpoint for request
+    var xmlhttp = new XMLHttpRequest();
+    var url = "http://10.80.17.1/getTemperatureData.py";
+
+    // empty data points array
+    temperature_points = [];
+
+    // request status
+    xmlhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+        var measurements = JSON.parse(this.responseText);
+        for (i = 0; i < measurements.length; i++) {
+            temperature_points.push({
+                x:moment.unix(measurements[i].unixtime),
+                y:measurements[i].value,
+            });
+        }
+        // we have data: draw
+        drawChart('tempChart', 'Temperatuur', 'C', temperature_points);
+        }
+    };
+    xmlhttp.open("GET", url, true);
+    xmlhttp.send();
+}
+
+function fetchAirHumidityData() {
+    // fetchpoint for request
+    var xmlhttp = new XMLHttpRequest();
+    var url = "http://10.80.17.1/getAirhumidityData.py";
+
+    // empty data points array
+    air_humidity_points = [];
+
+    // request status
+    xmlhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+        var measurements = JSON.parse(this.responseText);
+        for (i = 0; i < measurements.length; i++) {
+            air_humidity_points.push({
+                x:moment.unix(measurements[i].unixtime),
+                y:measurements[i].value,
+            });
+        }
+        // we have data: draw
+        drawChart('humidityChart', 'Luchtvochtigheid', '%', air_humidity_points);
+        }
+    };
+    xmlhttp.open("GET", url, true);
+    xmlhttp.send();
+}
+
+function fetchAirPressureData() {
+    // fetchpoint for request
+    var xmlhttp = new XMLHttpRequest();
+    var url = "http://10.80.17.1/getAirpressureData.py";
+
+    // empty data points array
+    air_pressure_points = [];
+
+    // request status
+    xmlhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+        var measurements = JSON.parse(this.responseText);
+        for (i = 0; i < measurements.length; i++) {
+            air_pressure_points.push({
+                x:moment.unix(measurements[i].unixtime),
+                y:measurements[i].value,
+            });
+        }
+        // we have data: draw
+        drawChart('pressureChart', 'Luchtdruk', 'Bar', air_pressure_points);
+        }
+    };
+    xmlhttp.open("GET", url, true);
+    xmlhttp.send();
+}
+
+function drawChart(id, chart_label, unity, measurement_points) {
+    // chart object requires context, data and options
+    var ctx = document.getElementById(id).getContext('2d');
+
+    var data = {
+        datasets: [{
+            label: chart_label,
+            borderColor: "rgba(0,220,220,0.5)",
+            backgroundColor: "rgba(0,220,220,0.2)",
+            pointBorderColor: "rgba(0,220,220,1)",
+            data: measurement_points,
+        },
+        ],
+    };
+    var options = {
+        title: { display: true, text: 'Weerstation' },
+        scales: {
+            xAxes: [{
+                display: true,
+                type: 'time',
+                distribution: 'linear',
+                ticks: { source: 'auto' },
+                bounds: 'data',
+                time: { unit: 'minute',
+                    stepSize: 1,
+                    displayFormats: { minute: 'H:mm:ss' },
+                },
+                scaleLabel: {
+                    display: true,
+                    labelString: 'Tijd',
+                },
+            }],
+            yAxes: [{
+                display: true,
+                scaleLabel: {
+                    display: true,
+                    labelString: unity,
+                },
+                ticks: {
+                    suggestedMin: 0.0,
+                    suggestedMax: 100.0,
+                },
+            }],
+        },
+        elements: {
+            line: {
+                tension: 0,
+            }
+        },
+    }
+
+    // create chart with these parameters
+    if (id == 'tempChart') {
+        window.tempChart = new Chart(ctx, {
+            type: 'line',
+            data : data,
+            options: options
+        });
+    }
+    
+    if (id == 'humidityChart') {
+        window.humidityChart = new Chart(ctx, {
+            type: 'line',
+            data : data,
+            options: options
+        });
+    }
+    
+    if (id == 'pressureChart') {
+        window.pressureChart = new Chart(ctx, {
+            type: 'line',
+            data : data,
+            options: options
+        });
+    }
+    
+    measurement_points = []
+}
+
+// create chart with fetched temperature data
+window.onload = function() {
+    fetchTemperatureData();
+    fetchAirHumidityData();
+    fetchAirPressureData();
+}
+
+</script>
+</body>
+</html>

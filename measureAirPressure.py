@@ -39,9 +39,9 @@ def countdown(t):
 # Create an infinite loop for getting the temperature every 10 seconds.
 try:
     while True:
-        sensor_name = 'Temperatuur'
+        sensor_name = 'Luchtdruk'
         verbose = True
-        interval = 10 # Seconds
+        interval = 20 # Seconds
         try:
             opts, args = getopt.getopt(sys.argv[1:], "vt:S:")
         except getopt.GetoptError as error:
@@ -97,31 +97,22 @@ try:
         if verbose:
             print("Reading data from sensor %s with id %s" % (sensor_data[1], sensor_data[0]))
         
-        sensor_readed_data = 0
-        if sensor_name == 'Temperatuur':
-            temperature = round(sh.get_temperature(), 1)
-            temperature = temperature - 10
-            if temperature > 0:
-                sensor_readed_data = temperature
-        elif sensor_name == 'Vochtigheid':
-            sensor_readed_data = round(sh.get_humidity(), 1)
-        elif sensor_name == 'Luchtdruk':
-            sensor_readed_data = round(sh.get_pressure(), 2)
         
-        if verbose and sensor_readed_data != 0:
-            print("%s: %s %s" % (sensor_data[1], sensor_readed_data, sensor_data[2]))
+        airpressure = round(sh.get_pressure(), 2)
+        
+        if verbose:
+            print("%s: %s %s" % (sensor_data[1], airpressure, sensor_data[2]))
         
         # Save the readed data from the sensor in the database.
-        if sensor_readed_data != 0:
-            try:
-                cursor.execute("INSERT INTO measurement (value, sensor_id) VALUES (%s, %s);", [sensor_readed_data, sensor_data[0]])
-            except mariadb.Error as error:
-                print("Error: {}".format(error))
-                sys.exit(2)
-                
-            database_connection.commit()
-            if verbose:
-                print("Sensor data committed")
+        try:
+            cursor.execute("INSERT INTO measurement (value, sensor_id) VALUES (%s, %s);", [airpressure, sensor_data[0]])
+        except mariadb.Error as error:
+            print("Error: {}".format(error))
+            sys.exit(2)
+            
+        database_connection.commit()
+        if verbose:
+            print("Sensor data committed")
         
         cursor.close()
         database_connection.close()

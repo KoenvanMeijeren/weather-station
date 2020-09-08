@@ -97,31 +97,45 @@ try:
         if verbose:
             print("Reading data from sensor %s with id %s" % (sensor_data[1], sensor_data[0]))
         
-        sensor_readed_data = 0
-        if sensor_name == 'Temperatuur':
-            temperature = round(sh.get_temperature(), 1)
-            temperature = temperature - 10
-            if temperature > 0:
-                sensor_readed_data = temperature
-        elif sensor_name == 'Vochtigheid':
-            sensor_readed_data = round(sh.get_humidity(), 1)
-        elif sensor_name == 'Luchtdruk':
-            sensor_readed_data = round(sh.get_pressure(), 2)
+        temperature = round(sh.get_temperature(), 1)
         
-        if verbose and sensor_readed_data != 0:
-            print("%s: %s %s" % (sensor_data[1], sensor_readed_data, sensor_data[2]))
+        # Fine tune this correction based on the normal temperature.
+        if temperature > 30:
+            temperature = temperature - 10
+        
+        # Try to get a correct temperature if the CPU temperature is high enough.
+        if temperature > 23:
+            temph = sh.get_temperature_from_humidity()
+            tempp = sh.get_temperature_from_pressure()
+
+            tempt = os.popen('/opt/vc/bin/vcgencmd measure_temp')
+            tempc = tempt.read()
+            tempc = tempc.replace('temp=','')
+            tempc = tempc.replace('\'C\n','')
+            tempc = float(tempc)
+
+            temp = (tempp + temph) / 2.0
+            temp = temp - (tempc - temp)
+            temperature = temp
+            
+        if temperature < 11:
+            temperature = temperature + 10
+        elif temperature < 15:
+            temperature = temperature + 5
+        
+        if verbose:
+            print("%s: %s %s" % (sensor_data[1], temperature, sensor_data[2]))
         
         # Save the readed data from the sensor in the database.
-        if sensor_readed_data != 0:
-            try:
-                cursor.execute("INSERT INTO measurement (value, sensor_id) VALUES (%s, %s);", [sensor_readed_data, sensor_data[0]])
-            except mariadb.Error as error:
-                print("Error: {}".format(error))
-                sys.exit(2)
-                
-            database_connection.commit()
-            if verbose:
-                print("Sensor data committed")
+        try:
+            cursor.execute("INSERT INTO measurement (value, sensor_id) VALUES (%s, %s);", [temperature, sensor_data[0]])
+        except mariadb.Error as error:
+            print("Error: {}".format(error))
+            sys.exit(2)
+            
+        database_connection.commit()
+        if verbose:
+            print("Sensor data committed")
         
         cursor.close()
         database_connection.close()
